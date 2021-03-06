@@ -1,8 +1,8 @@
 # connectiq-xclock
 
-garmin connect iq watchface that tires to replicate the looks of the classic clock application for x11. it's not pixel-perfect but should be good enough \
+garmin connect iq watchface that tires to replicate the looks of the classic clock application for x11. it's not pixel-perfect but should be good enough  
 
-[original xclock source code](https://gitlab.freedesktop.org/xorg/app/xclock/) \
+[original xclock source code](https://gitlab.freedesktop.org/xorg/app/xclock/)  
 
 ![screenshot](screenshot1.png)
 
