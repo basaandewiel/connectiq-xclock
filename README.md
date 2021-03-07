@@ -4,7 +4,10 @@ garmin connect iq watchface that tires to replicate the looks of the classic clo
 
 [original xclock source code](https://gitlab.freedesktop.org/xorg/app/xclock/)  
 
-![screenshot](screenshot1.png)
+![image1](imgs/img1.png)
+![image2](imgs/img2.png)
+![image3](imgs/img3.png)
+![image4](imgs/img4.png)
 
 ## incompatible watches
 
