@@ -3,7 +3,9 @@
         <iq:products>
             <iq:product id="fenix6xpro"/>
         </iq:products>
-        <iq:permissions/>
+        <iq:permissions>
+            <iq:uses-permission id="UserProfile"/>
+        </iq:permissions>
         <iq:languages/>
         <iq:barrels/>
     </iq:application>
