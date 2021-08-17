@@ -2,12 +2,13 @@ using Toybox.WatchUi;
 using Toybox.Graphics;
 using Toybox.System;
 using Toybox.Math; 
+using Toybox.UserProfile as Profile;
 
 var highPower = false;
 var PowerModeSwitched = false;
 
 var diameter;
-var radius; 
+var radius;
 var cn = 0.0;
 
 var s = 0.0;
@@ -24,6 +25,10 @@ var minutesOld = -1;
 
 var	time;
 var timeOld;
+
+var sleepTime;
+var wakeTime;
+var sleeping = false;
 
 const BATTERY_SIZE_LARGE = [55, 29];
 const BOX_PADDING = 2;
@@ -104,6 +109,9 @@ class xclockView extends WatchUi.WatchFace {
         	dc.clear(); //does not seem to work HERE
     	    dc.setPenWidth(1);
 	        drawTicks(dc); //baswi inserted; only draw ticks once
+			sleepTime = Profile.getProfile().sleepTime;
+			wakeTime = Profile.getProfile().wakeTime;
+	        
 		} else {
 			setLayout(Rez.Layouts.WatchFaceAlt(dc));
 		}
@@ -112,8 +120,10 @@ class xclockView extends WatchUi.WatchFace {
 
 	//! The user has just looked at their watch. Timers and animations may be started here.
 	function onExitSleep() {
-		highPower = true;
-		PowerModeSwitched = true;
+		if (!sleeping) { //do not activate highPower if user is sleeping
+			highPower = true;
+			PowerModeSwitched = true;
+		}
 	}
 
 	//! Terminate any active timers and prepare for slow updates.
@@ -126,6 +136,38 @@ class xclockView extends WatchUi.WatchFace {
 	}
 
     function onUpdate(dc) {
+		var now = Time.now();
+		var today = Time.today();
+
+		//var hours = sleepTime.divide( 3600 ).value();
+		//var minutes = sleepTime.value() - ( hours * 3600 );
+		//var seconds = sleepTime.value() - ( hours * 3600 ) - ( minutes * 60 );
+		//var string = "Wake Time: " + hours.format("%02u") + ":" + minutes.format("%02u") + ":" + seconds.format("%02u");
+		//System.println(string);
+		
+		var nowAbs = now.value();
+		var nowDays = (nowAbs / (24*3600));
+		//System.println("nowAbs" + nowAbs);
+		//System.println("nowDays" + nowDays);
+		//System.println("sleepTime" + sleepTime.value());
+		//System.println("wakeTime" + wakeTime.value());
+		//NB; logical OR is needed if condition below; otherwise after 
+		//    midnight nowAbs < (nowDays*24*3600 + sleepTime), because number of days increased
+		if ((nowAbs > (nowDays*24*3600 + sleepTime.value())) ||
+			(nowAbs < (nowDays*24*3600 + wakeTime.value()))
+		   ) {
+			sleeping = true; //current time is in sleeping times of user
+		} else {
+			sleeping = false;
+		}
+		
+
+	//	if (now.greaterThan(today.add(sleepTime)) && now.lessThan(today.add(wakeTime))) {
+	//		System.println("sleeping"+sleepTime+wakeTime);
+	//	} else {
+	//		System.println("awake"+sleepTime+wakeTime); 
+	//	} 
+    
  	   	if (highPower) {
  	   		if (PowerModeSwitched) {
  	   			PowerModeSwitched = false;
@@ -141,18 +183,19 @@ class xclockView extends WatchUi.WatchFace {
         } else { //low power mode
 	        $.time = System.getClockTime();
     	    $.minutes = $.time.min;
-              
- 			if (PowerModeSwitched) { //switched from high to low power mode
-	        	dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_WHITE);
-        	    dc.clear();
-        	    drawTicks(dc); //baswi inserted; only draw ticks once
- 			}
-            //if minutes changed, or switched to low power
-        	if (($.minutesOld != $.minutes) || PowerModeSwitched) {
-        		PowerModeSwitched = false;
-	        	drawFace(dc);
-	        	drawBatteryBox(dc, 115, 30);
-	        	$.minutesOld = $.minutes; //save when watch was updated
+			if ((!sleeping) || (($.minutes % 5) == 0)) { //update every 5 min, if user sleeps                  
+ 				if (PowerModeSwitched) { //switched from high to low power mode
+	        		dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_WHITE);
+        	    	dc.clear();
+        	    	drawTicks(dc); //baswi inserted; only draw ticks once
+ 				}
+            	//if minutes changed, or switched to low power
+        		if (($.minutesOld != $.minutes) || PowerModeSwitched) {
+        			PowerModeSwitched = false;
+	        		drawFace(dc);
+	        		drawBatteryBox(dc, 115, 30);
+	        		$.minutesOld = $.minutes; //save when watch was updated
+	    		}
 	    	}
         }        
     }
