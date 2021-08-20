@@ -3,6 +3,7 @@ using Toybox.Graphics;
 using Toybox.System;
 using Toybox.Math; 
 using Toybox.UserProfile as Profile;
+using Toybox.Time;
 
 var highPower = false;
 var PowerModeSwitched = false;
@@ -93,6 +94,9 @@ class xclockView extends WatchUi.WatchFace {
          
     // Load your resources here 
     function onLayout(dc) { //baswi, function inserted
+		sleepTime = Profile.getProfile().sleepTime;
+		wakeTime = Profile.getProfile().wakeTime;	        
+
     	if (!highPower) {
 			setLayout(Rez.Layouts.WatchFace(dc));
 			
@@ -109,13 +113,10 @@ class xclockView extends WatchUi.WatchFace {
         	dc.clear(); //does not seem to work HERE
     	    dc.setPenWidth(1);
 	        drawTicks(dc); //baswi inserted; only draw ticks once
-			sleepTime = Profile.getProfile().sleepTime;
-			wakeTime = Profile.getProfile().wakeTime;
-	        
 		} else {
 			setLayout(Rez.Layouts.WatchFaceAlt(dc));
 		}
-    
+	    View.onUpdate(dc);
     }
 
 	//! The user has just looked at their watch. Timers and animations may be started here.
@@ -123,6 +124,9 @@ class xclockView extends WatchUi.WatchFace {
 		if (!sleeping) { //do not activate highPower if user is sleeping
 			highPower = true;
 			PowerModeSwitched = true;
+			
+			//Force update
+			WatchUi.requestUpdate();
 		}
 	}
 
@@ -130,6 +134,7 @@ class xclockView extends WatchUi.WatchFace {
 	function onEnterSleep() {
 		highPower = false;
 		PowerModeSwitched = true;
+		System.println("switched to LOW power");
 
 		//Force update
 		WatchUi.requestUpdate();
@@ -171,23 +176,33 @@ class xclockView extends WatchUi.WatchFace {
  	   	if (highPower) {
  	   		if (PowerModeSwitched) {
  	   			PowerModeSwitched = false;
-				onLayout(dc);
+ 	   			System.println("switched to HIGH power");
+//				onLayout(dc);
 			}
 			// Get and show the current time
 			var clockTime = System.getClockTime();
 			var timeString = Lang.format("$1$:$2$", [clockTime.hour, clockTime.min.format("%02d")]);
-			var view = View.findDrawableById("TimeLabel");
-			view.setText(timeString);
-			// Call the parent onUpdate function to redraw the layout
-			View.onUpdate(dc); //only necessary after switchin layout
+
+	        var view = View.findDrawableById("TimeLabel");
+    	    //var fnt = WatchUi.loadResource(Rez.Fonts.Numbers);
+        	//view.setFont(fnt);
+        	//view.setColor(Application.getApp().getProperty("ForegroundColor"));
+        	view.setText(timeString);
+        	// Call the parent onUpdate function to redraw the layout
+    	    View.onUpdate(dc);        				
         } else { //low power mode
 	        $.time = System.getClockTime();
     	    $.minutes = $.time.min;
 			if ((!sleeping) || (($.minutes % 5) == 0)) { //update every 5 min, if user sleeps                  
  				if (PowerModeSwitched) { //switched from high to low power mode
+ 					System.println("switched to low power, clear and redraw ticks");
 	        		dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_WHITE);
         	    	dc.clear();
-        	    	drawTicks(dc); //baswi inserted; only draw ticks once
+        	    	drawTicks(dc);
+	        		drawFace(dc);
+	        		drawBatteryBox(dc, 115, 30);
+	        		$.minutesOld = $.minutes; //save when watch was updated
+//recursive?    	View.onUpdate(dc); //only necessary after switchin layout
  				}
             	//if minutes changed, or switched to low power
         		if (($.minutesOld != $.minutes) || PowerModeSwitched) {
@@ -195,9 +210,27 @@ class xclockView extends WatchUi.WatchFace {
 	        		drawFace(dc);
 	        		drawBatteryBox(dc, 115, 30);
 	        		$.minutesOld = $.minutes; //save when watch was updated
+	        		
+			        // Update fields
+        			var dateLabel = View.findDrawableById("DateLabel");
+        			var timeLabel = View.findDrawableById("TimeLabel");
+
+        			//dateLabel.setColor(Graphics.COLOR_BLACK);
+        			//timeLabel.setColor(Graphics.COLOR_BLACK);
+
+        			var dateString;
+        			var dateFormat = "$1$ $2$";
+        			var timeFormat = "$1$:$2$";
+        			var localTimeInfo = Time.Gregorian.info(now, Time.FORMAT_MEDIUM);
+        			var localHour = localTimeInfo.hour;
+ 		            var localTimeStr = Lang.format(timeFormat, [localHour, localTimeInfo.min.format("%02d")]);
+        			dateString = Lang.format(dateFormat, [localTimeInfo.day_of_week.toUpper(), localTimeInfo.day.format("%02d")]);
+        			dateLabel.setText(dateString);
+
+        			timeLabel.setText(localTimeStr);
 	    		}
-	    	}
-        }        
+	    	}	    
+        }
     }
 
     function drawFace(dc) {
