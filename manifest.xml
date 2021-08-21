@@ -4,6 +4,7 @@
             <iq:product id="fenix6xpro"/>
         </iq:products>
         <iq:permissions>
+            <iq:uses-permission id="Background"/>
             <iq:uses-permission id="UserProfile"/>
         </iq:permissions>
         <iq:languages/>

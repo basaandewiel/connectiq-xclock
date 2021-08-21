@@ -1,10 +1,15 @@
 <layouts>
 <layout id="WatchFace">
-<label id="TimeLabel" x="center" y="center" font="Gfx.FONT_LARGE" justification="Gfx.TEXT_JUSTIFY_CENTER" color="Gfx.COLOR_BLUE" />
-<label id="DateLabel" x="center" y="35" font="Gfx.FONT_SMALL" justification="Gfx.TEXT_JUSTIFY_CENTER" color="Gfx.COLOR_RED" />
+<drawable id="myBackground" class="myBackgroundC">
+        <param name="color">Gfx.COLOR_RED</param>
+        <param name="string">"Hello Custom Drawable!"</param>
+ </drawable>
+<label id="DateLabel" x="210" y="center" font="Gfx.FONT_XTINY" justification="Gfx.TEXT_JUSTIFY_CENTER" color="Gfx.COLOR_BLACK" />
+<label id="BatteryLabel" x="50" y="center" font="Gfx.FONT_XTINY" justification="Gfx.TEXT_JUSTIFY_CENTER" color="Gfx.COLOR_BLACK" />
 </layout>
 <layout id="WatchFaceAlt">
-<label id="TimeLabel" x="center" y="center" font="Gfx.FONT_LARGE" justification="Gfx.TEXT_JUSTIFY_CENTER" color="Gfx.COLOR_RED" />
-<label id="DateLabel" x="center" y="35" font="Gfx.FONT_SMALL" justification="Gfx.TEXT_JUSTIFY_CENTER" color="Gfx.COLOR_RED" />
+<label id="TimeLabel" x="center" y="center" font="Gfx.FONT_LARGE" justification="Gfx.TEXT_JUSTIFY_CENTER" color="Gfx.COLOR_WHITE" />
+<label id="DateLabel" x="220" y="center" font="Gfx.FONT_XTINY" justification="Gfx.TEXT_JUSTIFY_CENTER" color="Gfx.COLOR_WHITE" />
+<label id="BatteryLabel" x="50" y="center" font="Gfx.FONT_XTINY" justification="Gfx.TEXT_JUSTIFY_CENTER" color="Gfx.COLOR_BLACK" />
 </layout>
 </layouts>

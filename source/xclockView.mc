@@ -5,6 +5,7 @@ using Toybox.Math;
 using Toybox.UserProfile as Profile;
 using Toybox.Time;
 
+
 var highPower = false;
 var PowerModeSwitched = false;
 
@@ -61,31 +62,10 @@ function round(x) {
 
 class xclockView extends WatchUi.WatchFace {
 
-    var MARGIN_FACTOR = 0.97;
-    var ORIGINAL_SIZE = 116.0; //width of the face on vivoactive3 with mul=1
-    var TICK_FRACT = 95;
-    var MINOR_TICK_FRACT = 90;
     var HAND_WIDTH = 7;
     var HOUR_HAND_LENGTH = 40;
     var MINUTE_HAND_LENGTH = 70;
 
-	function drawTicks(dc) { 
-	    for(var i = 0; i < 60; i++) {
-           var x1 = Math.sin(Math.toRadians(i*6));
-           var y1 = Math.cos(Math.toRadians(i*6));
-           var frac;
-           if(i % 5) {
-               frac = TICK_FRACT;
-           } else {
-               frac = MINOR_TICK_FRACT;
-           }
-       	   var x2 = x1 * (frac / 100.0);
-       	   var y2 = y1 * (frac / 100.0);
-           var mul = MARGIN_FACTOR/(ORIGINAL_SIZE/diameter);
-       	   dc.drawLine((mul*Math.toDegrees(x1))+radius, (mul*Math.toDegrees(y1))+radius, 
-               (mul*Math.toDegrees(x2))+radius, (mul*Math.toDegrees(y2))+radius);
-        }
-	}
 
     function initialize() {
         WatchFace.initialize();
@@ -94,8 +74,11 @@ class xclockView extends WatchUi.WatchFace {
          
     // Load your resources here 
     function onLayout(dc) { //baswi, function inserted
+    	//NB: You should only do drawing from onUpdate(), NOT here
 		sleepTime = Profile.getProfile().sleepTime;
-		wakeTime = Profile.getProfile().wakeTime;	        
+		wakeTime = Profile.getProfile().wakeTime;	
+		$.time = System.getClockTime(); //must be initialised before onupdate is called
+		        
 
     	if (!highPower) {
 			setLayout(Rez.Layouts.WatchFace(dc));
@@ -110,20 +93,20 @@ class xclockView extends WatchUi.WatchFace {
         	$.timeOld = System.getClockTime(); //init time var
         
         	dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_WHITE);
-        	dc.clear(); //does not seem to work HERE
-    	    dc.setPenWidth(1);
-	        drawTicks(dc); //baswi inserted; only draw ticks once
+        	dc.setPenWidth(1);
 		} else {
-			setLayout(Rez.Layouts.WatchFaceAlt(dc));
+			//baswi:onlayout is NOT called when high power mode is entered
 		}
 	    View.onUpdate(dc);
     }
 
 	//! The user has just looked at their watch. Timers and animations may be started here.
 	function onExitSleep() {
+		System.println("onExitSleep");
 		if (!sleeping) { //do not activate highPower if user is sleeping
 			highPower = true;
 			PowerModeSwitched = true;
+			System.println("switched to HIGH power");
 			
 			//Force update
 			WatchUi.requestUpdate();
@@ -177,46 +160,69 @@ class xclockView extends WatchUi.WatchFace {
  	   		if (PowerModeSwitched) {
  	   			PowerModeSwitched = false;
  	   			System.println("switched to HIGH power");
-//				onLayout(dc);
+ 	   			System.println("set WatchFaceALT");
+				setLayout(Rez.Layouts.WatchFaceAlt(dc));
 			}
 			// Get and show the current time
 			var clockTime = System.getClockTime();
 			var timeString = Lang.format("$1$:$2$", [clockTime.hour, clockTime.min.format("%02d")]);
 
-	        var view = View.findDrawableById("TimeLabel");
+	        var timelabel = View.findDrawableById("TimeLabel");
+
+
+   			var dateString;
+   			var dateFormat = "$1$ $2$";
+   			var timeFormat = "$1$:$2$";
+   			var localTimeInfo = Time.Gregorian.info(now, Time.FORMAT_MEDIUM);
+			 		            
+        	dateString = Lang.format(dateFormat, [localTimeInfo.day_of_week.toUpper(), localTimeInfo.day.format("%02d")]);
+        	var dateLabel = View.findDrawableById("DateLabel");
+        	dateLabel.setText(dateString);
+
+
     	    //var fnt = WatchUi.loadResource(Rez.Fonts.Numbers);
         	//view.setFont(fnt);
         	//view.setColor(Application.getApp().getProperty("ForegroundColor"));
-        	view.setText(timeString);
+        	timelabel.setText(timeString);
         	// Call the parent onUpdate function to redraw the layout
     	    View.onUpdate(dc);        				
         } else { //low power mode
 	        $.time = System.getClockTime();
     	    $.minutes = $.time.min;
+    	    var myBackgroundInst = View.findDrawableById("myBackground");
+					
 			if ((!sleeping) || (($.minutes % 5) == 0)) { //update every 5 min, if user sleeps                  
  				if (PowerModeSwitched) { //switched from high to low power mode
  					System.println("switched to low power, clear and redraw ticks");
-	        		dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_WHITE);
-        	    	dc.clear();
-        	    	drawTicks(dc);
-	        		drawFace(dc);
-	        		drawBatteryBox(dc, 115, 30);
+ 					System.println("set WatchFace");
+					setLayout(Rez.Layouts.WatchFace(dc));
+ 					
+	        		dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_WHITE);		
+        	    	
+//        	    	drawTicks(dc);
+//	        		drawFace(dc);
 	        		$.minutesOld = $.minutes; //save when watch was updated
-//recursive?    	View.onUpdate(dc); //only necessary after switchin layout
- 				}
+	        		//The View.onUpdate() function's primary job is to clear the screen and draw the items within your layout
+	        		//If you're not using layouts you wouldn't necessarily need to call it.
+					//Because it will clear the screen. This means if you call it later in your own onUpdate function anything you've already drawn will be wiped out. 
+					//It also draws the items in your layout. So the proper way to use it would be:
+					//function onUpdate(dc) {
+						// Update items in your layout
+						// Call parent onUpdate() to clear the screen/draw the updated layout items
+						//View.onUpdate(dc);
+						// Do any manual drawing here. It will draw on top of the layout.
+				}
+ 					//}
             	//if minutes changed, or switched to low power
         		if (($.minutesOld != $.minutes) || PowerModeSwitched) {
         			PowerModeSwitched = false;
-	        		drawFace(dc);
-	        		drawBatteryBox(dc, 115, 30);
+	        		//myBackgroundInst.draw(dc);
+	        		//backgroundView.drawFace(dc);
 	        		$.minutesOld = $.minutes; //save when watch was updated
 	        		
 			        // Update fields
         			var dateLabel = View.findDrawableById("DateLabel");
-        			var timeLabel = View.findDrawableById("TimeLabel");
-
-        			//dateLabel.setColor(Graphics.COLOR_BLACK);
-        			//timeLabel.setColor(Graphics.COLOR_BLACK);
+        			var batterylabel = View.findDrawableById("BatteryLabel");
 
         			var dateString;
         			var dateFormat = "$1$ $2$";
@@ -227,36 +233,20 @@ class xclockView extends WatchUi.WatchFace {
         			dateString = Lang.format(dateFormat, [localTimeInfo.day_of_week.toUpper(), localTimeInfo.day.format("%02d")]);
         			dateLabel.setText(dateString);
 
-        			timeLabel.setText(localTimeStr);
+					var battery = System.getSystemStats().battery;
+					var batteryString = battery.format("%.1f");
+					batterylabel.setText(batteryString);
 	    		}
+	    		//System.println("BEFORE view.onupdate");
+        	    View.onUpdate(dc); //NB: clears screen with BLACK background if using layouts, AND draws elements
+        	    //present in layout.xml file
+        	    //baswi tested: view.onupdate calls draw function of class specified in layout.xml
+        	    //System.println("AFTER view.onupdate");
 	    	}	    
         }
     }
-
-    function drawFace(dc) {
-		//clear previous hands
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);	
-        drawHand(dc, (timeOld.hour%12)*30 + timeOld.min/2, $.width, $.hourHandLength);
-        drawHand(dc, timeOld.min*6, $.width, $.minHandLength);
-
-		$.timeOld = $.time;			
-        dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);	
-        drawHand(dc, ($.time.hour%12)*30 + $.time.min/2, $.width, (HOUR_HAND_LENGTH*$.radius)/100.0);
-        drawHand(dc, $.time.min*6, $.width, (MINUTE_HAND_LENGTH*$.radius)/100.0);
-    }
     
-	function drawHand(dc, angle, w, l) {
-        var s = Math.sin(Math.toRadians(angle));
-        var c = Math.cos(Math.toRadians(angle));
-        var wc = w*c;
-        var ws = w*s;
-        dc.fillPolygon([
-            [cn[0] + round(l*s), cn[1] - round(l*c)],
-            [cn[0] - round(ws+wc), cn[1] + round(wc-ws)],
-            [cn[0] - round(ws-wc), cn[1] + round(wc+ws)],
-        ]);
-    }
-    
+		
 	function drawTextBox(dc, text, x, y, boxWidth, boxHeight) {
 		dc.setPenWidth(2);
 		
@@ -277,12 +267,7 @@ class xclockView extends WatchUi.WatchFace {
 
 		boxText.draw(dc);
 	}
-	
-    function drawBatteryBox(dc, x, y) {
-			var battery = System.getSystemStats().battery;
-			var batteryString = battery.format("%.1f");
 
-			batteryString = " " + batteryString;
-			drawTextBox(dc, batteryString, x, y, BATTERY_SIZE_LARGE[0], BATTERY_SIZE_LARGE[1]);
-		}
+    
+	
 }
